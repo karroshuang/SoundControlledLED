@@ -16,6 +16,12 @@ int rAmp;
 int gAmp;
 int bAmp;
 int wAmp;
+int IdleCounter = 0;
+
+float prevHz;
+
+float maxHz = 0;
+float currentHz = 0;
 
 bool rFlag;
 bool gFlag;
@@ -111,13 +117,29 @@ void loop(){
     }
   }
   peakHz = (peaki * FREQ_RESOLUTION);
-  if(peakAmp > 200){
+
+  //If nothing is playing for a long period of time, reset scaling frequency
+  if(IdleCounter == 75){
+	  maxHz = 0;
+	  IdleCounter = 0;
+  }
+
+  if(peakAmp > 1000){
     Serial.print("Peak frequency: ");
     Serial.print(peakHz);
     Serial.print("    ");
     Serial.print("Amplitude: ");
     Serial.print(peakAmp);
-    Serial.println ("");
+    Serial.print ("	  ");
+
+    if(peakHz > maxHz){
+  	  maxHz = peakHz;
+    }
+
+    currentHz = peakHz;
+    float scaledHz = currentHz/maxHz;
+    Serial.print ("Current frequency: ");
+    Serial.println (scaledHz);
   }
 
   /*****************/
@@ -127,69 +149,180 @@ void loop(){
 	  if(peakAmp > 3000){
 		  peakAmp = 3000;
 	  }
-	  if(peakHz >= 0 && peakHz < 200){
+
+	  //if snare is heard
+	  if(currentHz == 60 && prevHz != 60){
+		  analogWrite(WHITEPIN, 255);
+		  delay(100);
+	  }
+	  //red
+	  if((currentHz/maxHz) >= 0 && (currentHz/maxHz) < 0.0833){
 		r = peakAmp * 0.085;
 		g = 0;
 		b = 0;
 		w = 0;
+		analogWrite(WHITEPIN, w);
 		analogWrite(GREENPIN, g);
 		analogWrite(BLUEPIN, b);
-		analogWrite(WHITEPIN, w);
-		for(x = 0; x < r; x++){
-			analogWrite(REDPIN, r);
-			delay(peakAmp/3000);
-		}
+		analogWrite(REDPIN, r);
 		rAmp = peakAmp;
 		rFlag = true;
 	  }
-
-	  else if(peakHz >= 200 && peakHz < 400){
-		r = 0;
-		g = peakAmp * 0.085;
+	  //orange
+	  else if((currentHz/maxHz) >= 0.0833 && (currentHz/maxHz) < 0.167){
+		r = peakAmp * 0.085;
+		g = (peakAmp * 0.085)/8;
 		b = 0;
 		w = 0;
-		analogWrite(REDPIN, r);
 		analogWrite(BLUEPIN, b);
 		analogWrite(WHITEPIN, w);
-		for(x = 0; x < g; x++){
-			analogWrite(GREENPIN, x);
-			delay(peakAmp/3000);
-		}
+		analogWrite(REDPIN, r);
+		analogWrite(GREENPIN, g);
+		rAmp = peakAmp;
 		gAmp = peakAmp;
-		gFlag = true;
+		rgFlag = true;
 	  }
-
-	  else if(peakHz >= 400 && peakHz < 600){
-		r = 0;
-		g = 0;
-		b = peakAmp * 0.085;
-		w = 0;
-		analogWrite(REDPIN, r);
-		analogWrite(GREENPIN, g);
-		analogWrite(WHITEPIN, w);
-		for(x = 0; x < b; x++){
+	  //yelllow
+	  else if((currentHz/maxHz) >= 0.167 && (currentHz/maxHz) < 0.25){
+	  		r = peakAmp * 0.085;
+	  		g = peakAmp * 0.085/4;
+	  		b = 0;
+	  		w = 0;
+	  		analogWrite(BLUEPIN, b);
+	  		analogWrite(WHITEPIN, w);
+			analogWrite(GREENPIN, g);
+			analogWrite(REDPIN, r);
+	  		rAmp = peakAmp;
+	  		gAmp = peakAmp;
+	  		rgFlag = true;
+	  	  }
+	  //green
+	  else if((currentHz/maxHz) >= 0.25 && (currentHz/maxHz) < 0.333){
+	  		r = (peakAmp * 0.085);
+	  		g = (peakAmp * 0.085);
+	  		b = 0;
+	  		w = 0;
+	  		analogWrite(BLUEPIN, b);
+	  		analogWrite(WHITEPIN, w);
+			analogWrite(GREENPIN, g);
+			analogWrite(REDPIN, r);
+	  		rAmp = peakAmp;
+	  		gAmp = peakAmp;
+	  		rgFlag = true;
+	  	  }
+	  //green
+	  else if((currentHz/maxHz) >= 0.333 && (currentHz/maxHz) < 0.42){
+	  		r = 0;
+	  		g = (peakAmp * 0.085);
+	  		b = 0;
+	  		w = 0;
+	  		analogWrite(REDPIN, r);
+	  		analogWrite(BLUEPIN, b);
+	  		analogWrite(WHITEPIN, w);
+			analogWrite(GREENPIN, g);
+	  		gAmp = peakAmp;
+	  		gFlag = true;
+	  	  }
+	  //green - blue
+	  else if((currentHz/maxHz) >= 0.42 && (currentHz/maxHz) < 0.5){
+	  		r = 0;
+	  		g = (peakAmp * 0.085);
+	  		b = (peakAmp * 0.085);
+	  		w = 0;
+	  		analogWrite(REDPIN, r);
+	  		analogWrite(WHITEPIN, w);
+			analogWrite(GREENPIN, g);
 			analogWrite(BLUEPIN, b);
-			delay(3000/peakAmp);
-		}
-		bAmp = peakAmp;
-		bFlag = true;
-	  }
-
-	  else if(peakHz >= 400 && peakHz < 600){
-		r = 0;
-		g = 0;
-		b = 0;
-		w = peakAmp * 0.085;
-		analogWrite(REDPIN, r);
-		analogWrite(GREENPIN, g);
-		analogWrite(BLUEPIN, b);
-		for(x = 0; x < w; x++){
-			analogWrite(WHITEPIN, r);
-			delay(peakAmp/3000);
-		}
-		wAmp = peakAmp;
-		wFlag = true;
-	  }
+	  		gAmp = peakAmp;
+	  		bAmp = peakAmp;
+	  		gbFlag = true;
+	  	  }
+	  //dark blue
+	  else if((currentHz/maxHz) >= 0.5 && (currentHz/maxHz) < 0.583){
+	  		r = 0;
+	  		g = (peakAmp * 0.085)/2;
+	  		b = (peakAmp * 0.085);
+	  		w = 0;
+	  		analogWrite(REDPIN, r);
+	  		analogWrite(WHITEPIN, w);
+			analogWrite(BLUEPIN, b);
+			analogWrite(GREENPIN, g);
+	  		gAmp = peakAmp;
+	  		bAmp = peakAmp;
+	  		gbFlag = true;
+	  	  }
+	  //light purple
+	  else if((currentHz/maxHz) >= 0.583 && (currentHz/maxHz) < 0.67){
+	  		r = (peakAmp * 0.085)/4;
+	  		g = 0;
+	  		b = peakAmp * 0.085;
+	  		w = 0;
+  			analogWrite(GREENPIN, g);
+	  		analogWrite(WHITEPIN, w);
+			analogWrite(REDPIN, r);
+			analogWrite(BLUEPIN, b);
+	  		rAmp = peakAmp;
+	  		bAmp = peakAmp;
+	  		rbFlag = true;
+	  	  }
+	  //purple
+	  else if((currentHz/maxHz) >= 0.67 && (currentHz/maxHz) < 0.75){
+	  		r = (peakAmp * 0.085)/2;
+	  		g = 0;
+	  		b = peakAmp * 0.085;
+	  		w = 0;
+  			analogWrite(GREENPIN, g);
+	  		analogWrite(WHITEPIN, w);
+			analogWrite(REDPIN, r);
+			analogWrite(BLUEPIN, b);
+	  		rAmp = peakAmp;
+	  		bAmp = peakAmp;
+	  		rbFlag = true;
+	  	  }
+	  //purple - pink
+	  else if((currentHz/maxHz) >= 0.75 && (currentHz/maxHz) < 0.83){
+	  		r = peakAmp * 0.085;
+	  		g = 0;
+	  		b = (peakAmp * 0.085)/2;
+	  		w = 0;
+  			analogWrite(GREENPIN, g);
+	  		analogWrite(WHITEPIN, w);
+			analogWrite(REDPIN, r);
+			analogWrite(BLUEPIN, b);
+	  		rAmp = peakAmp;
+	  		bAmp = peakAmp;
+	  		rbFlag = true;
+	  	  }
+	  //pink
+	  else if((currentHz/maxHz) >= 0.833 && (currentHz/maxHz) < 0.92){
+	  		r = peakAmp * 0.085;
+	  		g = 0;
+	  		b = (peakAmp * 0.085)/4;
+	  		w = 0;
+	  		analogWrite(BLUEPIN, b);
+	  		analogWrite(WHITEPIN, w);
+			analogWrite(REDPIN, r);
+			analogWrite(GREENPIN, g);
+	  		rAmp = peakAmp;
+	  		gAmp = peakAmp;
+	  		rbFlag = true;
+	  	  }
+	  else if((currentHz/maxHz) >= 0.92){
+	  		r = peakAmp * 0.085;
+	  		g = peakAmp * 0.085;
+	  		b = peakAmp * 0.085;
+	  		w = peakAmp * 0.085;
+			analogWrite(REDPIN, r);
+			analogWrite(BLUEPIN, b);
+			analogWrite(GREENPIN, g);
+			analogWrite(WHITEPIN, w);
+	  		rAmp = peakAmp;
+	  		gAmp = peakAmp;
+	  		bAmp = peakAmp;
+	  		wAmp = peakAmp;
+	  		rgbwFlag = true;
+	  	  }
+	  prevHz = currentHz;
   }
 
   /*********************/
@@ -256,6 +389,7 @@ void loop(){
       g = 0;
       analogWrite(REDPIN, 0);
       analogWrite(GREENPIN, 0);
+      rgFlag = false;
     }
     //Fading Red & Blue light at same time
     else if(rbFlag){
@@ -277,6 +411,7 @@ void loop(){
       b = 0;
       analogWrite(REDPIN, 0);
       analogWrite(BLUEPIN, 0);
+      rbFlag = false;
     }
     //Fading Green and Blue light at same time
     else if(gbFlag){
@@ -298,6 +433,7 @@ void loop(){
       b = 0;
       analogWrite(GREENPIN, 0);
       analogWrite(BLUEPIN, 0);
+      gbFlag = false;
     }
     //Fading Red and White COlor
     else if(rwFlag){
@@ -319,6 +455,7 @@ void loop(){
       w = 0;
       analogWrite(REDPIN, 0);
       analogWrite(WHITEPIN, 0);
+      rwFlag = false;
     }
     //Fading Green and White Color
     else if(gwFlag){
@@ -340,6 +477,7 @@ void loop(){
       w = 0;
       analogWrite(GREENPIN, 0);
       analogWrite(WHITEPIN, 0);
+      gwFlag = false;
     }
     //Fading Blue and White Color
     else if(bwFlag){
@@ -361,7 +499,28 @@ void loop(){
       w = 0;
       analogWrite(BLUEPIN, 0);
       analogWrite(WHITEPIN, 0);
+      bwFlag = false;
     }
+    //All lights are on. turn them off.
+    else if(rgbwFlag){
+        for (x = w; x > 0; x--) {
+          analogWrite(REDPIN, x);
+          analogWrite(GREENPIN, x);
+          analogWrite(BLUEPIN, x);
+          analogWrite(WHITEPIN, x);
+          delay(wAmp*fadeRatio);
+        }
+      r = 0;
+      g = 0;
+      b = 0;
+      w = 0;
+      analogWrite(REDPIN, 0);
+      analogWrite(GREENPIN, 0);
+      analogWrite(BLUEPIN, 0);
+      analogWrite(WHITEPIN, 0);
+      rgbwFlag = false;
+    }
+    IdleCounter++;
   }
 }
 
